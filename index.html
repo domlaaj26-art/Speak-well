@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CEFR Multilevel Speaking — mock va baholash</title>
+<meta name="description" content="CEFR Multilevel speaking mock imtihoni: savollar ovozda o'qiladi, javob yozib olinadi va rasmiy mezon bo'yicha baholanadi.">
+<meta name="theme-color" content="#17557F">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2317557F'/><rect x='38' y='18' width='24' height='40' rx='12' fill='white'/><path d='M30 52a20 20 0 0 0 40 0' stroke='white' stroke-width='7' fill='none' stroke-linecap='round'/><path d='M50 72v12' stroke='white' stroke-width='7' stroke-linecap='round'/></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span><b>Multilevel Speaking</b><small>Galactus LC · Teacher AJ</small></span>
+  </div>
+  <div class="topacts">
+    <button id="btnTheme" class="ghost" title="Mavzu">◐</button>
+    <button id="btnSettings" class="ghost">Sozlamalar</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ================= HOME ================= -->
+<section id="home">
+  <div class="hero">
+    <span class="eyebrow">Real imtihon formati · 2026</span>
+    <h1>Mock imtihon, ovoz yozuvi va avtomatik baholash</h1>
+    <p>Savollarni imtihonchi ovozi o‘qiydi, signaldan keyin taymer ishlaydi va javobingiz yozib olinadi. Oxirida nutqingiz matnga aylantiriladi va rasmiy mezon bo‘yicha band hamda izoh beriladi.</p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <span class="eyebrow">Qaysi qismlar</span>
+      <div class="parts">
+        <label class="pbox"><input type="checkbox" id="p11" checked><span><b>Part 1.1 · A2</b><small>3 savol · 30 soniyadan</small></span></label>
+        <label class="pbox"><input type="checkbox" id="p12" checked><span><b>Part 1.2 · B1</b><small>2 rasm · 45 + 30 + 30 s</small></span></label>
+        <label class="pbox"><input type="checkbox" id="p2" checked><span><b>Part 2 · B2</b><small>1 daq tayyorgarlik + 2 daq</small></span></label>
+        <label class="pbox"><input type="checkbox" id="p3" checked><span><b>Part 3 · C1</b><small>1 daq tayyorgarlik + 2 daq</small></span></label>
+      </div>
+      <div class="opts">
+        <label class="sw"><input type="checkbox" id="optRecord" checked> Ovozni yozib olish</label>
+        <label class="sw"><input type="checkbox" id="optStt" checked> Nutqni matnga aylantirish</label>
+        <label class="sw"><input type="checkbox" id="optVoice" checked> Savollarni ovozda o‘qish</label>
+      </div>
+      <div class="go">
+        <button id="btnStart" class="primary big">Mockni boshlash</button>
+        <button id="btnShuffle" class="ghost">Boshqa variant</button>
+      </div>
+      <p class="note" id="variantNote"></p>
+      <p class="warn" id="capNote" hidden></p>
+    </div>
+
+    <div class="card">
+      <span class="eyebrow">Format</span>
+      <table class="fmt">
+        <tr><th>Qism</th><th>Topshiriq</th><th>Tayyorgarlik</th><th>Gapirish</th><th>Ball</th></tr>
+        <tr><td>Part 1.1</td><td>3 shaxsiy savol</td><td>—</td><td>30 s × 3</td><td>5</td></tr>
+        <tr><td>Part 1.2</td><td>2 rasm, 3 savol</td><td>—</td><td>45 + 30 + 30 s</td><td>5</td></tr>
+        <tr><td>Part 2</td><td>Rasm + 3 savol</td><td>1 daq</td><td>2 daq</td><td>5</td></tr>
+        <tr><td>Part 3</td><td>FOR / AGAINST</td><td>1 daq</td><td>2 daq</td><td>6</td></tr>
+      </table>
+      <p class="note">Jami xom ball 21 ga teng va rasmiy shkala bo‘yicha 0–75 ga aylantiriladi: 65–75 — C1, 51–64 — B2, 38–50 — B1. Yodlab olingan javob 0 ball oladi.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= EXAM ================= -->
+<section id="stage" hidden>
+  <div class="bar">
+    <span class="badge" id="partLabel">Part 1.1</span>
+    <span class="phase" id="phaseLabel"></span>
+    <span class="reclamp" id="recDot" hidden><i></i> yozilmoqda</span>
+  </div>
+
+  <div class="prompt" id="prompt"></div>
+
+  <div class="footer">
+    <div class="ring" id="ring">
+      <svg width="126" height="126" viewBox="0 0 126 126" aria-hidden="true">
+        <circle cx="63" cy="63" r="55" fill="none" stroke="var(--line)" stroke-width="9"></circle>
+        <circle id="arc" cx="63" cy="63" r="55" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round" stroke-dasharray="345.6" stroke-dashoffset="0"></circle>
+      </svg>
+      <div class="t" id="clock">0:30</div>
+    </div>
+    <div class="meter" id="meter" hidden><i id="meterBar"></i></div>
+    <div class="ctrls">
+      <button id="btnPause" class="ghost">Pauza</button>
+      <button id="btnRepeat" class="ghost">Qayta o‘qish</button>
+      <button id="btnSkip" class="ghost">Keyingisi</button>
+      <button id="btnStop" class="ghost danger">To‘xtatish</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RESULTS ================= -->
+<section id="results" hidden>
+  <div class="hero">
+    <span class="eyebrow">Mock tugadi</span>
+    <h1>Javoblaringiz va baho</h1>
+    <p>Har bir javobni tinglab ko‘rishingiz mumkin. Matn avtomatik yozildi — noto‘g‘ri joyini to‘g‘rilab, keyin baholashga yuboring.</p>
+  </div>
+
+  <div id="answers" class="answers"></div>
+
+  <div class="card gradecard">
+    <div class="go">
+      <button id="btnGrade" class="primary big">Rasmiy mezon bo‘yicha baholash</button>
+      <button id="btnDownload" class="ghost">Ovoz yozuvlarini yuklab olish</button>
+      <button id="btnAgain" class="ghost">Yangi variant</button>
+    </div>
+    <p class="note" id="gradeNote">Baholash uchun Sozlamalarda API kalit kiritilgan bo‘lishi kerak.</p>
+    <div id="grade" hidden></div>
+  </div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<div id="settings" class="modal" hidden>
+  <div class="sheet">
+    <div class="sheethead">
+      <h2>Sozlamalar</h2>
+      <button id="btnCloseSettings" class="ghost">Yopish</button>
+    </div>
+
+    <label class="field">
+      <span>AI provayder</span>
+      <select id="provider">
+        <option value="openai">OpenAI (ovozni matnga aylantirish ham ishlaydi)</option>
+        <option value="anthropic">Anthropic (Claude) — faqat baholash</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span>API kalit</span>
+      <input id="apikey" type="password" placeholder="sk-..." autocomplete="off">
+      <small>Kalit faqat shu qurilmaning brauzerida saqlanadi va to‘g‘ridan-to‘g‘ri provayderga yuboriladi.</small>
+    </label>
+
+    <label class="field">
+      <span>Baholovchi model</span>
+      <input id="model" type="text" placeholder="gpt-4o-mini">
+    </label>
+
+    <label class="field">
+      <span>Imtihonchi ovozi</span>
+      <select id="voicepick"></select>
+      <small id="voiceNote"></small>
+    </label>
+
+    <label class="field">
+      <span>Nutq tezligi</span>
+      <select id="rate">
+        <option value="0.85">Sekin</option>
+        <option value="0.95" selected>Oddiy</option>
+        <option value="1.05">Tez</option>
+      </select>
+    </label>
+
+    <div class="go">
+      <button id="btnTestVoice" class="ghost">Ovozni sinab ko‘rish</button>
+      <button id="btnSaveSettings" class="primary">Saqlash</button>
+    </div>
+    <p class="note">Baholash narxi bir mockga taxminan bir necha sentni tashkil qiladi va provayder hisobingizdan yechiladi.</p>
+  </div>
+</div>
+
+<footer class="pagefoot">
+  Savollar <b>«Speak well 3 — Past exam questions 2026»</b> to‘plamidan. Format va baholash mezoni UZBMB rasmiy hujjatlariga asoslangan — imtihondan oldin uzbmb.uz dagi joriy versiyani tekshiring.
+</footer>
+
+</main>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
