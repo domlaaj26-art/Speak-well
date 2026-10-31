@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/34222388/README.md)
 # CEFR Multilevel Speaking — mock sayt
 
 Savollar: *Speak well 3 — Past exam questions 2026* (Galactus LC, Teacher AJ).
@@ -38,7 +37,13 @@ Shu havolani o‘quvchilarga yuborasiz. Faylni o‘zgartirsangiz, GitHub'da yang
 
 Saytda **Sozlamalar** tugmasi bor. Kalit faqat o‘sha qurilmaning brauzerida saqlanadi, hech qayerga yuborilmaydi.
 
-**OpenAI (tavsiya qilinadi)** — uchta narsa birdan ishlaydi:
+**Google Gemini — bepul (eng oson yo‘l)**
+- kalit: [aistudio.google.com](https://aistudio.google.com) → **Get API key** → **Create API key**. Google hisobi kifoya, karta so‘ralmaydi.
+- bepul tarifda ishlaydi: javoblarni baholaydi va ovozni matnga aylantiradi (iPhone'da ham).
+- imtihonchi ovozi qurilmaning o‘z ovozi bo‘ladi (Chrome'da “Google UK English” eng tabiiy eshitiladi).
+- bepul tarifda kunlik so‘rovlar soni cheklangan; bir sinf uchun yetadi, limitga yetsa ertasiga tiklanadi.
+
+**OpenAI (pullik)** — uchta narsa birdan ishlaydi:
 - tabiiy imtihonchi ovozi,
 - ovozni matnga aylantirish (iPhone va Safari'da ham),
 - javoblarni baholash.

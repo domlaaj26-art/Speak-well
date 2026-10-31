@@ -14,16 +14,23 @@ const LS = {
 
 /* ============================ settings ============================ */
 const cfg = {
-  provider: LS.get("ml.provider","openai"),
+  provider: LS.get("ml.provider","google"),
   key:      LS.get("ml.key",""),
   model:    LS.get("ml.model",""),
   voice:    LS.get("ml.voice",""),
   rate:     LS.get("ml.rate","0.95"),
   theme:    LS.get("ml.theme","auto")
 };
-const DEFAULT_MODEL = { openai:"gpt-4o-mini", anthropic:"claude-sonnet-5-5" };
+const DEFAULT_MODEL = { openai:"gpt-4o-mini", anthropic:"claude-sonnet-5-5", google:"gemini-3.5-flash-lite" };
+const GOOGLE_STT = "gemini-3.5-transcribe";
+const PROVIDER_HELP = {
+  google:"Bepul kalit: aistudio.google.com → “Get API key”. Karta talab qilinmaydi. Baholash va ovozni matnga aylantirish ishlaydi; imtihonchi ovozi qurilmanikidan olinadi.",
+  openai:"platform.openai.com → API keys. Hisobga oz miqdorda pul qo‘yish kerak. Tabiiy imtihonchi ovozi faqat shu yerda bor.",
+  anthropic:"console.anthropic.com → API keys. Faqat baholash; ovozni matnga aylantirish uchun Chrome kerak bo‘ladi."
+};
 const modelName = () => cfg.model.trim() || DEFAULT_MODEL[cfg.provider];
 const hasAI = () => !!cfg.key.trim();
+const canTranscribe = () => hasAI() && (cfg.provider==="openai" || cfg.provider==="google");
 
 function applyTheme(){
   if(cfg.theme==="auto") document.documentElement.removeAttribute("data-theme");
@@ -41,12 +48,18 @@ function openSettings(){
   $("model").value = cfg.model;
   $("model").placeholder = DEFAULT_MODEL[cfg.provider];
   $("rate").value = cfg.rate;
+  $("providerHelp").textContent = PROVIDER_HELP[cfg.provider];
   fillVoices();
   $("settings").hidden = false;
 }
 $("btnSettings").onclick = openSettings;
 $("btnCloseSettings").onclick = ()=> $("settings").hidden = true;
-$("provider").onchange = ()=>{ $("model").placeholder = DEFAULT_MODEL[$("provider").value]; fillVoices($("provider").value); };
+$("provider").onchange = ()=>{
+  const p = $("provider").value;
+  $("model").placeholder = DEFAULT_MODEL[p];
+  $("providerHelp").textContent = PROVIDER_HELP[p];
+  fillVoices(p);
+};
 $("btnSaveSettings").onclick = ()=>{
   cfg.provider = $("provider").value;
   cfg.key = $("apikey").value.trim();
@@ -558,25 +571,79 @@ function renderAnswers(){
   answers.forEach((a,i)=>{ const t=$("tx"+i); if(t) t.oninput = ()=>{ a.text = t.value; }; });
 }
 
+/* --- recorded audio -> 16 kHz mono WAV (Gemini accepts wav everywhere) --- */
+function encodeWav(samples, rate){
+  const buf = new ArrayBuffer(44 + samples.length*2), v = new DataView(buf);
+  const str = (off,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(off+i, s.charCodeAt(i)); };
+  str(0,"RIFF"); v.setUint32(4, 36+samples.length*2, true); str(8,"WAVE"); str(12,"fmt ");
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  str(36,"data"); v.setUint32(40, samples.length*2, true);
+  let o = 44;
+  for(let i=0;i<samples.length;i++,o+=2){
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(o, s<0 ? s*0x8000 : s*0x7FFF, true);
+  }
+  return new Blob([buf], {type:"audio/wav"});
+}
+async function toWav(blob){
+  const ab = await blob.arrayBuffer();
+  const c = audioCtx();
+  const decoded = await c.decodeAudioData(ab.slice(0));
+  const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration*16000)), 16000);
+  const src = off.createBufferSource(); src.buffer = decoded; src.connect(off.destination); src.start();
+  const out = await off.startRendering();
+  return encodeWav(out.getChannelData(0), 16000);
+}
+const toBase64 = blob => new Promise((res,rej)=>{
+  const fr = new FileReader();
+  fr.onload = ()=> res(String(fr.result).split(",")[1]);
+  fr.onerror = rej;
+  fr.readAsDataURL(blob);
+});
+
+async function sttOpenAI(blob){
+  const fd = new FormData();
+  const ext = (blob.type||"").includes("mp4") ? "mp4" : (blob.type||"").includes("ogg") ? "ogg" : "webm";
+  fd.append("file", blob, "answer."+ext);
+  fd.append("model","whisper-1");
+  fd.append("language","en");
+  const r = await fetch("https://api.openai.com/v1/audio/transcriptions",{
+    method:"POST", headers:{ "Authorization":"Bearer "+cfg.key }, body: fd });
+  if(!r.ok) throw new Error(await r.text());
+  return ((await r.json()).text||"").trim();
+}
+async function sttGoogle(blob){
+  let wav;
+  try{ wav = await toWav(blob); }catch(e){ wav = blob; }
+  const b64 = await toBase64(wav);
+  const body = { contents:[{ parts:[
+    { text:"Transcribe the English speech in this recording word for word. Return only the transcript, with no commentary. If there is no speech, return an empty string." },
+    { inline_data:{ mime_type: wav.type || "audio/wav", data: b64 } }
+  ]}]};
+  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+GOOGLE_STT+":generateContent?key="+encodeURIComponent(cfg.key),{
+    method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+  if(!r.ok) throw new Error(await r.text());
+  const j = await r.json();
+  return (((j.candidates||[])[0]||{}).content||{}).parts
+    ? j.candidates[0].content.parts.map(p=>p.text||"").join("").trim() : "";
+}
+
 async function transcribeAll(){
-  if(cfg.provider!=="openai" || !hasAI()) return;
+  if(!canTranscribe()) return;
   const todo = answers.filter(a=>a.blob && !(a.text||"").trim());
   if(!todo.length) return;
+  let done = 0, failed = "";
   $("gradeNote").textContent = "Ovoz matnga aylantirilmoqda… (" + todo.length + " ta javob)";
   for(const a of todo){
     try{
-      const fd = new FormData();
-      const ext = (a.blob.type||"").includes("mp4") ? "mp4" : (a.blob.type||"").includes("ogg") ? "ogg" : "webm";
-      fd.append("file", a.blob, "answer."+ext);
-      fd.append("model","whisper-1");
-      fd.append("language","en");
-      const r = await fetch("https://api.openai.com/v1/audio/transcriptions",{
-        method:"POST", headers:{ "Authorization":"Bearer "+cfg.key }, body: fd });
-      if(r.ok){ const j = await r.json(); a.text = (j.text||"").trim(); }
-    }catch(e){}
+      a.text = cfg.provider==="google" ? await sttGoogle(a.blob) : await sttOpenAI(a.blob);
+      done++;
+    }catch(e){ failed = String(e.message||e).slice(0,160); }
   }
   renderAnswers();
   updateNotes();
+  if(!done && failed) $("gradeNote").textContent = "Ovozni matnga aylantirib bo‘lmadi: " + failed;
 }
 
 function finish(){
@@ -643,6 +710,17 @@ Give half points where the scale allows (e.g. 4.5). Be strict but fair: an answe
 }
 
 async function callAI(prompt){
+  if(cfg.provider==="google"){
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+modelName()+":generateContent?key="+encodeURIComponent(cfg.key),{
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }],
+                             generationConfig:{ responseMimeType:"application/json", temperature:0.2 } })
+    });
+    if(!r.ok) throw new Error("API xatosi " + r.status + ": " + (await r.text()).slice(0,200));
+    const j = await r.json();
+    const parts = (((j.candidates||[])[0]||{}).content||{}).parts || [];
+    return parts.map(p=>p.text||"").join("");
+  }
   if(cfg.provider==="anthropic"){
     const r = await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
@@ -712,9 +790,9 @@ function updateNotes(){
   const hasSR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   const n = [];
   if(!hasSR){
-    n.push(cfg.provider==="openai" && hasAI()
-      ? "Bu brauzer nutqni o‘zi matnga aylantirmaydi — ovoz yozuvi OpenAI orqali matnga aylantiriladi."
-      : "Bu brauzer (Safari / iPhone) nutqni matnga aylantirmaydi. OpenAI kalitini kiriting yoki javobni klaviatura mikrofoni bilan diktovka qiling.");
+    n.push(canTranscribe()
+      ? "Bu brauzer nutqni o‘zi matnga aylantirmaydi — ovoz yozuvi " + (cfg.provider==="google"?"Gemini":"OpenAI") + " orqali matnga aylantiriladi."
+      : "Bu brauzer (Safari / iPhone) nutqni matnga aylantirmaydi. Sozlamalardan Gemini yoki OpenAI kalitini kiriting, yoki javobni klaviatura mikrofoni bilan diktovka qiling.");
   }
   if(!hasAI()) n.push("Baholash uchun Sozlamalardan API kalit kiriting.");
   const el = $("capNote");
